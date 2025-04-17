@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  # Promock - Mock metrics generator
+  promock:
+    build: .
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./samples:/metrics
+    restart: unless-stopped
+
+  # Prometheus - Metrics collection and storage
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - promock
+    restart: unless-stopped
+
+  # Grafana - Visualization and dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml
+      - ./datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./dashboards/json:/etc/grafana/provisioning/dashboards/json
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  grafana-storage:
